@@ -9,7 +9,7 @@ app = FastAPI(title="Battery Monitor", version="1.0.0")
 
 # ── MAVLink connection ──────────────────────────────────────
 # ADDED: connect to BlueOS MAVLink router running on the Pi
-mav = mavutil.mavlink_connection('udp:localhost:14550')
+mav = mavutil.mavlink_connection('udpin:0.0.0.0:14551')
 
 print("Waiting for MAVLink heartbeat...")
 mav.wait_heartbeat()                             # ADDED: blocks until ArduSub responds
