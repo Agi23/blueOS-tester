@@ -48,7 +48,7 @@ ssh pi@blueos.local
 
 ```bash
 # Option A: clone from GitHub
-git clone https://github.com/yourusername/blueOS-tester
+git clone https://github.com/Agi23/blueOS-tester.git
 cd blueOS-tester/pi-deployment
 
 # Option B: SCP from your laptop (run on your laptop, not the Pi)

@@ -21,6 +21,101 @@ blueOS-tester/
     └── Dockerfile
 ```
 
+## Getting the Code
+
+### Clone the repo on your laptop
+
+```bash
+git clone https://github.com/Agi23/blueOS-tester.git
+cd blueOS-tester
+```
+
+### Get the code onto the Pi
+
+**Using git clone**
+
+```bash
+ssh pi@blueos.local
+git clone https://github.com/Agi23/blueOS-tester.git
+cd blueOS-tester/pi-deployment
+```
+
+Any future updates are a single `git pull` on the Pi — no file transfer needed.
+
+## Quick Start
+
+### local-dev: Run with uvicorn (no Docker)
+
+The fastest way to get started — no hardware or Docker required.
+
+```bash
+cd local-dev
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open your browser:
+
+| URL | What you see |
+|---|---|
+| `http://localhost:8000/ui` | Live dashboard (simulated values) |
+| `http://localhost:8000/battery` | Raw REST response |
+| `http://localhost:8000/docs` | Swagger UI |
+
+The `--reload` flag means any file change restarts the server automatically — no manual intervention needed.
+
+---
+
+### local-dev: Test the Docker container
+
+Use this to validate the Dockerfile before deploying to the Pi.
+
+```bash
+cd local-dev
+
+# Build
+docker build -t battery-monitor:dev .
+
+# Run
+docker run -d --name battery_monitor -p 8000:8000 battery-monitor:dev
+
+# Check it started
+docker logs -f battery_monitor
+
+# Open http://localhost:8000/ui
+
+# Clean up when done
+docker rm -f battery_monitor
+```
+
+Note: uses `-p 8000:8000` port mapping rather than `--network host` — this is correct for Docker Desktop on Windows/Mac. The Pi deployment uses `--network host` instead; see pi-deployment README for why.
+
+---
+
+### pi-deployment: Deploy to the BlueROV2
+
+```bash
+# SSH into the Pi
+ssh pi@blueos.local
+
+cd /home/pi/blueOS-tester/pi-deployment
+
+# Build on the Pi (required — laptop image won't run on ARM)
+docker build -t battery-monitor:dev .
+
+# Run
+docker run -d \
+  --name battery_monitor \
+  --network host \
+  --restart unless-stopped \
+  battery-monitor:dev
+
+# Confirm MAVLink heartbeat received and server is up
+docker logs -f battery_monitor
+```
+
+Open `http://blueos.local:8000/ui` from your laptop browser.
+
 ---
 
 ## Architecture
@@ -52,36 +147,3 @@ The REST endpoint handles on-demand queries — initial page load, external serv
 | `/docs` | GET | Auto-generated Swagger UI |
 
 ---
-
-## Quick Start
-
-### No hardware (local-dev)
-
-```bash
-cd local-dev
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Open `http://localhost:8000/ui`
-
-### On the BlueROV2 Pi (pi-deployment)
-
-```bash
-# SSH into the Pi first
-ssh pi@blueos.local
-cd /home/pi/blueOS-tester/pi-deployment
-docker build -t battery-monitor:dev .
-docker run -d --name battery_monitor --network host --restart unless-stopped battery-monitor:dev
-```
-
-Open `http://blueos.local:8000/ui`
-
----
-
-## Key Learning Points
-
-- The only difference between local-dev and pi-deployment is the MAVLink connection string and the data source — the FastAPI routes, WebSocket, and frontend are identical
-- Volume mounts during development mean you can edit code without rebuilding the Docker image
-- `--network host` on the Pi gives the container access to the MAVLink router on `localhost:14550`
-- BlueOS extensions are just Docker containers with a `metadata.json` that tells BlueOS how to run them
